@@ -3,6 +3,10 @@
 Aqua ICQR turns one destination URL into a shareable underwater QR experience.
 The browser generates the QR code locally and connects it to a living low-poly coral garden.
 
+This project is inspired by [tree.icqr.com](https://tree.icqr.com/).
+
+![Aqua ICQR showing a living underwater reef with destination and QR controls](docs/images/preview.png)
+
 ## Run Locally
 
 Aqua ICQR requires Node.js 22.12 or later and npm.
