@@ -341,6 +341,23 @@ input {
   font-size: 11px;
 }
 
+.credit {
+  margin: 14px 0 0;
+  color: rgba(217, 248, 239, 0.52);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.credit a {
+  color: var(--mist);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.credit a:hover {
+  color: var(--foam);
+}
+
 .reveal-status {
   position: absolute;
   top: clamp(104px, 24vh, 200px);

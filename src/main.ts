@@ -54,6 +54,10 @@ root.innerHTML = `
           </div>
           <p class="form-message" aria-live="polite"></p>
         </form>
+        <p class="credit">
+          Made by <a href="https://github.com/AndrewDongminYoo" target="_blank" rel="noopener noreferrer">Dongmin Yu (Andrew)</a>, a mobile developer.
+          <a href="https://github.com/AndrewDongminYoo/aqua_icqr" target="_blank" rel="noopener noreferrer">Source on GitHub</a>
+        </p>
       </section>
 
       <section class="reveal-status" aria-live="polite" hidden>

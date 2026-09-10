@@ -4,6 +4,7 @@ Aqua ICQR turns one destination URL into a shareable underwater QR experience.
 The browser generates the QR code locally and connects it to a living low-poly coral garden.
 
 This project is inspired by [tree.icqr.com](https://tree.icqr.com/).
+A hosted version is available at [icqr.donminzzi.kr](https://icqr.donminzzi.kr).
 
 ![Aqua ICQR transforming from a living underwater reef into a QR code and back](docs/images/preview.gif)
 
