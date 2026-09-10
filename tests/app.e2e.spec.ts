@@ -60,6 +60,25 @@ function readRafCount(page: Page): Promise<number> {
   return page.evaluate(() => (window as typeof window & { __aquaRafCallbacks: number }).__aquaRafCallbacks);
 }
 
+// A background tab reports document.hidden and never delivers animation frames; browser automation
+// tools drive pages in exactly that state, so the QR must still become ready without a frame.
+async function installBackgroundTab(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const requestAnimationFrame = window.requestAnimationFrame.bind(window);
+    const gate = window as typeof window & { __aquaRafEnabled?: boolean };
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+    window.requestAnimationFrame = (callback) =>
+      gate.__aquaRafEnabled ? requestAnimationFrame(callback) : 0;
+  });
+}
+
+function enableAnimationFrames(page: Page): Promise<void> {
+  return page.evaluate(() => {
+    (window as typeof window & { __aquaRafEnabled?: boolean }).__aquaRafEnabled = true;
+  });
+}
+
 async function stubShare(page: Page, stubs: ShareStubs): Promise<void> {
   await page.addInitScript((options: ShareStubs) => {
     Object.defineProperty(navigator, 'share', {
@@ -289,6 +308,29 @@ test('stops and resumes animation frames when a normal-motion reef becomes hidde
   });
   await page.waitForTimeout(250);
   expect(await readRafCount(page)).toBeGreaterThan(hiddenFrames);
+});
+
+test('draws the reef and finishes the QR reveal in a background tab that never delivers animation frames', async ({
+  page,
+}) => {
+  const browser = attachBrowserErrorCapture(page);
+  await installBackgroundTab(page);
+  await page.goto('/');
+  await expect(page.locator('html')).toHaveAttribute('data-reveal-phase', 'idle');
+  await createReef(page);
+  await expect(page.locator('.scene-canvas')).toHaveJSProperty('width', 1280);
+
+  await page.getByRole('button', { name: 'Show QR' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-view', 'qr', { timeout: 8_000 });
+  await expect(page.locator('html')).toHaveAttribute('data-reveal-phase', 'revealed');
+  await expect(page.locator('.reveal-status')).toBeHidden();
+  await expect(page.getByRole('button', { name: 'View reef' })).toBeEnabled();
+
+  await enableAnimationFrames(page);
+  const capture = await decodeCompositeScreenshot(page);
+  expect(decodePixels(eraseRectangle(capture, await protectedStage(page)))).toBeNull();
+  expect(decodePixels(capture)).toBe(destination);
+  expect(browser.errors).toEqual([]);
 });
 
 test('rejects unsupported and over-capacity destinations without changing the current URL', async ({ page }) => {

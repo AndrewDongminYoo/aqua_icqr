@@ -134,6 +134,7 @@ let scene: AquariumScene | null = null;
 let activeDestination: string | null = null;
 let currentView: View = 'reef';
 let transition: Transition | null = null;
+let transitionTimer: number | null = null;
 let animationFrame: number | null = null;
 let layoutFrame: number | null = null;
 let reducedMotion = motionQuery.matches;
@@ -273,9 +274,8 @@ function updateLayout(): void {
     void drawFallback(activeDestination, fallbackSize, fallbackPixelRatio);
   }
 
-  if (!document.hidden) {
-    setSceneFrame(getCurrentFrame());
-  }
+  // Resizing clears the drawing buffer, so redraw even in a hidden tab or the stage stays blank.
+  setSceneFrame(getCurrentFrame());
 }
 
 function requestLayout(): void {
@@ -306,9 +306,18 @@ function completeTransition(time: number): void {
 
   if (!completed) return;
 
-  transition = null;
+  clearTransition();
   setCurrentView(completed.direction === 'to-qr' ? 'qr' : 'reef');
   setPhase(currentView === 'qr' ? 'revealed' : 'reef');
+function clearTransition(): void {
+  transition = null;
+
+  if (transitionTimer !== null) {
+    window.clearTimeout(transitionTimer);
+    transitionTimer = null;
+  }
+}
+
   revealStatus.hidden = true;
   shareMessage.textContent = currentView === 'qr' ? 'QR view ready to scan.' : 'Living reef restored.';
   renderControls();
@@ -384,6 +393,11 @@ function setFormError(message: string): void {
   destinationInput.setAttribute('aria-invalid', 'true');
   destinationInput.focus();
 }
+  // A hidden tab delivers no animation frames, so the timeline must also finish on a timer.
+  transitionTimer = window.setTimeout(() => {
+    transitionTimer = null;
+    completeTransition(performance.now());
+  }, REVEAL_DURATION_MS + 120);
 
 function clearFormError(): void {
   formMessage.textContent = '';
@@ -454,7 +468,7 @@ async function activateDestination(
   activeDestination = destination;
   openLink.href = destination;
   dockFormSlot.append(form);
-  transition = null;
+  clearTransition();
 
   if (scene) {
     fallbackCanvas.hidden = true;
@@ -567,7 +581,7 @@ sceneCanvas.addEventListener('webglcontextlost', (event) => {
   event.preventDefault();
   const lostScene = scene;
   scene = null;
-  transition = null;
+  clearTransition();
   reconcileAnimation();
   lostScene?.dispose();
   sceneCanvas.hidden = true;
@@ -615,16 +629,15 @@ layoutObserver.observe(dock);
 setCurrentView('reef');
 setPhase('idle');
 renderControls();
-requestLayout();
+// The first layout runs synchronously so a tab that never paints still gets a sized, drawn stage.
+updateLayout();
 reconcileAnimation();
 
 const sharedDestination = fromShareFragment(window.location.hash);
 
 if (sharedDestination.ok) {
   destinationInput.value = sharedDestination.destination;
-  window.requestAnimationFrame(() => {
-    void activateDestination(sharedDestination.destination, false);
-  });
+  void activateDestination(sharedDestination.destination, false);
 } else if (sharedDestination.reason !== 'missing') {
   setFormError('This shared reef contains an invalid destination.');
 }
