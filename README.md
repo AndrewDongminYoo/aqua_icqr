@@ -34,7 +34,7 @@ The command runs these gates:
 
 1. Vitest unit tests for URL state, QR surface mapping, animation timing, and deterministic scene movement.
 2. TypeScript checks and the Vite production build.
-3. Playwright browser tests for creator, recipient, reduced-motion, invalid-input, WebGL fallback, and rendered QR decoding behavior.
+3. Playwright browser tests for creator, recipient, reduced-motion, background-tab, invalid-input, WebGL fallback, and rendered QR decoding behavior.
 
 The runtime gate decodes complete page screenshots, including the controls above the canvas.
 It uses jsQR as an independent decoder and expects the exact destination URL.
