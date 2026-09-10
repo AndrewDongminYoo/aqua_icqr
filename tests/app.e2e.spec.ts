@@ -439,7 +439,7 @@ test('reports a fallback QR that could not be drawn instead of leaving a blank s
   await expect(page.locator('.fallback-canvas')).toBeHidden();
   // The notice changes the dock height, so a second attempt at the new size is expected; a rejection would surface as a page error instead.
   expect(browser.errors.length).toBeGreaterThan(0);
-  expect(browser.errors.every((message) => message.startsWith('Aqua ICQR could not draw the fallback QR code.'))).toBe(true);
+  expect(browser.errors.every((message) => message.startsWith('a-que-ar could not draw the fallback QR code.'))).toBe(true);
 });
 
 test.describe('fallback QR on a high-density display', () => {

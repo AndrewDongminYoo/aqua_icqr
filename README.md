@@ -1,16 +1,16 @@
-# Aqua ICQR
+# a-que-ar
 
-Aqua ICQR turns one destination URL into a shareable underwater QR experience.
+a-que-ar reads as "A QR" and looks like "aqua": it turns one destination URL into a shareable underwater QR experience.
 The browser generates the QR code locally and connects it to a living low-poly coral garden.
 
 This project is inspired by [tree.icqr.com](https://tree.icqr.com/).
-A hosted version is available at [icqr.donminzzi.kr](https://icqr.donminzzi.kr).
+A hosted version is available at [a-que-ar.donminzzi.kr](https://a-que-ar.donminzzi.kr).
 
-![Aqua ICQR transforming from a living underwater reef into a QR code and back](docs/images/preview.gif)
+![a-que-ar transforming from a living underwater reef into a QR code and back](docs/images/preview.gif)
 
 ## Run Locally
 
-Aqua ICQR requires Node.js 22.12 or later and npm.
+a-que-ar requires Node.js 22.12 or later and npm.
 
 ```bash
 npm install
@@ -52,7 +52,7 @@ The application stores the destination in the share URL fragment as `#to=<encode
 Browsers do not send URL fragments in ordinary HTTP requests, so the destination does not enter normal server request logs through this mechanism.
 The destination is still visible to anyone who receives or inspects the shared URL.
 
-Aqua ICQR does not use an account, database, analytics service, or server-side short link.
+a-que-ar does not use an account, database, analytics service, or server-side short link.
 
 ## Architecture
 

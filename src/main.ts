@@ -22,7 +22,7 @@ interface Transition {
 const app = document.querySelector<HTMLDivElement>('#app');
 
 if (!app) {
-  throw new Error('Aqua ICQR could not find the application root.');
+  throw new Error('a-que-ar could not find the application root.');
 }
 
 const root = app;
@@ -34,9 +34,9 @@ root.innerHTML = `
     <div class="water-atmosphere" aria-hidden="true"></div>
 
     <header class="site-header">
-      <a class="brand" href="./" aria-label="Aqua ICQR home">
+      <a class="brand" href="./" aria-label="a-que-ar home">
         <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
-        <span>AQUA <b>ICQR</b></span>
+        <span><b>A</b>·<b>Q</b>UE·A<b>R</b></span>
       </a>
       <p class="local-note"><span></span> Generated on this device</p>
     </header>
@@ -101,7 +101,7 @@ function requireElement<T extends Element>(selector: string): T {
   const element = root.querySelector<T>(selector);
 
   if (!element) {
-    throw new Error(`Aqua ICQR could not find ${selector}.`);
+    throw new Error(`a-que-ar could not find ${selector}.`);
   }
 
   return element;
@@ -155,7 +155,7 @@ if (supportsWebGL()) {
     scene = new AquariumScene(sceneCanvas);
     document.documentElement.dataset.renderer = 'webgl';
   } catch (error) {
-    console.warn('Aqua ICQR could not initialize WebGL. The 2D QR fallback is active.', error);
+    console.warn('a-que-ar could not initialize WebGL. The 2D QR fallback is active.', error);
     sceneCanvas.hidden = true;
     document.documentElement.dataset.renderer = 'fallback';
   }
@@ -417,7 +417,7 @@ async function drawFallback(destination: string, size: number, pixelRatio: numbe
   } catch (error) {
     fallbackCanvas.hidden = true;
     shareMessage.textContent = 'The QR code could not be drawn in this browser.';
-    console.warn('Aqua ICQR could not draw the fallback QR code.', error);
+    console.warn('a-que-ar could not draw the fallback QR code.', error);
     return;
   }
 
@@ -528,7 +528,7 @@ shareButton.addEventListener('click', async () => {
 
   const shareUrl = window.location.href;
   const shareData = {
-    title: 'Aqua ICQR',
+    title: 'a-que-ar',
     text: 'Follow this living link through the deep.',
     url: shareUrl,
   };
