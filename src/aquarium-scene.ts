@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 import type { QrSurface } from './qr-surface';
 import type { RevealFrame } from './reveal-timeline';
-import { getFishTransform, getReefModuleTransform } from './scene-math';
+import { getFishTransform, getModuleCluster, getReefModuleTransform } from './scene-math';
 
 const COLORS = {
   abyss: 0x031c26,
@@ -141,6 +141,9 @@ export class AquariumScene {
   private readonly reusableModuleMatrix = new THREE.Matrix4();
   private cameraViewHeight = 2;
   private verticalViewOffset = 0;
+  private rendererPixelRatio = Number.NaN;
+  private rendererWidth = Number.NaN;
+  private rendererHeight = Number.NaN;
   private surfaceModules: THREE.InstancedMesh | null = null;
   private surfaceGridSize = 0;
   private surfaceCellSize = 0;
@@ -158,7 +161,6 @@ export class AquariumScene {
       alpha: false,
       antialias: true,
       powerPreference: 'high-performance',
-      preserveDrawingBuffer: true,
     });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -172,7 +174,6 @@ export class AquariumScene {
     this.camera.up.set(0, 0, -1);
 
     this.scene.add(this.surfaceRoot);
-    this.scene.add(this.reefRoot);
     this.addLights();
     this.addSeabed();
     this.addReef();
@@ -220,7 +221,7 @@ export class AquariumScene {
         modules.setColorAt(
           instance,
           isDark
-            ? darkPalette[((row * 5 + column * 3) % 7) % darkPalette.length]
+            ? darkPalette[getModuleCluster(row, column) % darkPalette.length]
             : light,
         );
         instance += 1;
@@ -328,8 +329,20 @@ export class AquariumScene {
     this.camera.right = viewWidth * 0.5;
     this.updateCameraProjection();
 
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    this.renderer.setSize(safeWidth, safeHeight, false);
+    // setPixelRatio already calls setSize, so only touch the drawing buffer when a value changed.
+    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+    const sizeChanged = safeWidth !== this.rendererWidth || safeHeight !== this.rendererHeight;
+    this.rendererWidth = safeWidth;
+    this.rendererHeight = safeHeight;
+
+    if (pixelRatio !== this.rendererPixelRatio) {
+      this.rendererPixelRatio = pixelRatio;
+      this.renderer.setPixelRatio(pixelRatio);
+    }
+
+    if (sizeChanged) {
+      this.renderer.setSize(safeWidth, safeHeight, false);
+    }
   }
 
   render(timeSeconds: number): void {

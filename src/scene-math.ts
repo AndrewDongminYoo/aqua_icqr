@@ -34,6 +34,10 @@ export function getFishTransform(
   };
 }
 
+export function getModuleCluster(row: number, column: number): number {
+  return (row * 5 + column * 3) % 7;
+}
+
 function mix(from: number, to: number, progress: number): number {
   if (progress === 0) return from;
   if (progress === 1) return to;
@@ -57,7 +61,7 @@ export function getReefModuleTransform(
   const variation = ((row * 17 + column * 23) % 11) / 10;
   const xPattern = ((row * 7 + column * 11) % 9) - 4;
   const zPattern = ((row * 13 + column * 5) % 9) - 4;
-  const cluster = (row * 5 + column * 3) % 7;
+  const cluster = getModuleCluster(row, column);
   const clusterAngle = ((cluster - 1) / 6) * Math.PI * 2;
   const clusterRadius = cluster === 0 ? 0 : halfExtent * (0.5 + (cluster % 2) * 0.08);
   const moduleAngle = (row * gridSize + column) * GOLDEN_ANGLE;
