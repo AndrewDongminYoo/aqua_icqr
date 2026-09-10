@@ -293,9 +293,10 @@ input {
 
 .create-button,
 .primary-action,
-.secondary-action {
+.secondary-action,
+.tertiary-action {
   display: inline-flex;
-  min-height: 42px;
+  min-height: 44px;
   align-items: center;
   justify-content: center;
   border: 1px solid transparent;
@@ -327,9 +328,24 @@ input {
 
 .create-button:disabled,
 .primary-action:disabled,
-.secondary-action:disabled {
+.secondary-action:disabled,
+.tertiary-action:disabled {
   cursor: wait;
   opacity: 0.54;
+  text-decoration: none;
+  transform: none;
+}
+
+/* Inside the result dock the coral fill belongs to the view toggle alone; re-creating is a secondary move. */
+.dock-form-slot .create-button {
+  border-color: rgba(217, 248, 239, 0.22);
+  background: rgba(217, 248, 239, 0.04);
+  color: var(--foam);
+}
+
+.dock-form-slot .create-button:hover {
+  border-color: rgba(217, 248, 239, 0.52);
+  background: rgba(217, 248, 239, 0.1);
   transform: none;
 }
 
@@ -423,9 +439,9 @@ input {
 
 .dock-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(112px, 1fr));
-  gap: 7px;
-  min-width: 244px;
+  grid-template-columns: repeat(2, minmax(124px, 1fr));
+  gap: 6px 8px;
+  min-width: 268px;
 }
 
 .secondary-action {
@@ -438,6 +454,21 @@ input {
 .secondary-action:hover {
   border-color: rgba(217, 248, 239, 0.52);
   background: rgba(217, 248, 239, 0.1);
+}
+
+.tertiary-action {
+  padding: 0 8px;
+  background: transparent;
+  color: var(--mist);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: rgba(217, 248, 239, 0.28);
+  text-underline-offset: 4px;
+}
+
+.tertiary-action:hover {
+  color: var(--foam);
+  text-decoration-color: var(--foam);
 }
 
 .fallback-notice,
@@ -475,23 +506,36 @@ input {
   display: none;
 }
 
+/* The gauge spans the stage band between the header and the active panel (--stage-* from main.ts). */
 .depth-marker {
   position: absolute;
-  top: 110px;
+  top: var(--stage-top, 110px);
   right: 38px;
-  bottom: 74px;
+  bottom: var(--stage-bottom, 74px);
   z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
-  color: rgba(217, 248, 239, 0.36);
-  font-size: 8px;
+  color: rgba(217, 248, 239, 0.42);
+  font-size: 9px;
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.16em;
+}
+
+.depth-marker span {
   writing-mode: vertical-rl;
 }
 
+.depth-marker span:first-child {
+  opacity: calc(0.55 + var(--depth, 0) * 0.45);
+}
+
+.depth-marker span:last-child {
+  opacity: calc(1 - var(--depth, 0) * 0.45);
+}
+
 .depth-marker i {
+  position: relative;
   width: 1px;
   flex: 1;
   margin: 10px 0;
@@ -500,6 +544,19 @@ input {
     rgba(217, 248, 239, 0.3) 0 3px,
     transparent 3px 11px
   );
+}
+
+/* The needle is driven per frame by --depth from main.ts: 0 rests at the seabed, 1 at the surface. */
+.depth-marker i::after {
+  position: absolute;
+  top: calc((1 - var(--depth, 0)) * 100%);
+  left: 50%;
+  width: 11px;
+  height: 2px;
+  background: var(--coral);
+  box-shadow: 0 0 0 3px rgba(242, 123, 88, 0.16);
+  transform: translate(-50%, -50%);
+  content: "";
 }
 
 :focus-visible {

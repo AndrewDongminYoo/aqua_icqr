@@ -73,9 +73,9 @@ root.innerHTML = `
         <div class="dock-form-slot"></div>
         <div class="dock-actions">
           <button class="primary-action view-toggle" type="button">Show QR</button>
-          <button class="secondary-action share-button" type="button">Share experience</button>
-          <button class="secondary-action replay-button" type="button">Replay</button>
           <a class="secondary-action open-link" href="#" target="_blank" rel="noopener noreferrer">Open destination</a>
+          <button class="tertiary-action share-button" type="button">Share experience</button>
+          <button class="tertiary-action replay-button" type="button">Replay</button>
         </div>
         <p class="fallback-notice" hidden>3D view is unavailable. Your QR still works.</p>
         <label class="share-fallback" hidden>
@@ -176,8 +176,14 @@ function setCurrentView(view: View): void {
   experience.dataset.view = view;
 }
 
-function setSceneFrame(frame: RevealFrame, time = performance.now()): void {
+// The depth gauge beside the stage follows the camera: 0 sits at the seabed, 1 at the surface.
+function applyRevealFrame(frame: RevealFrame): void {
   scene?.setRevealFrame(frame);
+  experience.style.setProperty('--depth', frame.cameraProgress.toFixed(3));
+}
+
+function setSceneFrame(frame: RevealFrame, time = performance.now()): void {
+  applyRevealFrame(frame);
   scene?.render(reducedMotion ? 0 : time / 1_000);
 }
 
@@ -259,6 +265,8 @@ function updateLayout(): void {
     Math.floor(Math.min(560, window.innerWidth - 32, availableHeight - 4)),
   );
 
+  experience.style.setProperty('--stage-top', `${insets.top}px`);
+  experience.style.setProperty('--stage-bottom', `${insets.bottom}px`);
   experience.style.setProperty('--fallback-top', `${Math.floor(insets.top + (availableHeight - fallbackSize) * 0.5)}px`);
   experience.style.setProperty('--fallback-left', `${Math.floor((window.innerWidth - fallbackSize) * 0.5)}px`);
   experience.style.setProperty('--fallback-size', `${fallbackSize}px`);
@@ -301,14 +309,6 @@ function reconcileAnimation(): void {
   }
 }
 
-function completeTransition(time: number): void {
-  const completed = transition;
-
-  if (!completed) return;
-
-  clearTransition();
-  setCurrentView(completed.direction === 'to-qr' ? 'qr' : 'reef');
-  setPhase(currentView === 'qr' ? 'revealed' : 'reef');
 function clearTransition(): void {
   transition = null;
 
@@ -318,6 +318,14 @@ function clearTransition(): void {
   }
 }
 
+function completeTransition(time: number): void {
+  const completed = transition;
+
+  if (!completed) return;
+
+  clearTransition();
+  setCurrentView(completed.direction === 'to-qr' ? 'qr' : 'reef');
+  setPhase(currentView === 'qr' ? 'revealed' : 'reef');
   revealStatus.hidden = true;
   shareMessage.textContent = currentView === 'qr' ? 'QR view ready to scan.' : 'Living reef restored.';
   renderControls();
@@ -338,7 +346,7 @@ function renderScene(now: number): void {
       transition.direction === 'to-qr'
         ? getRevealFrame(elapsed, false)
         : getReverseRevealFrame(elapsed, false);
-    scene.setRevealFrame(frame);
+    applyRevealFrame(frame);
 
     if (elapsed >= REVEAL_DURATION_MS) {
       completeTransition(now);
@@ -372,7 +380,7 @@ function beginTransition(direction: TransitionDirection, replay = false): void {
     direction === 'to-qr'
       ? getRevealFrame(0, reducedMotion)
       : getReverseRevealFrame(0, reducedMotion);
-  scene.setRevealFrame(firstFrame);
+  applyRevealFrame(firstFrame);
   revealStatusText.textContent =
     direction === 'to-qr' ? 'The reef is gathering into a code…' : 'The reef is returning to the deep…';
   revealStatus.hidden = reducedMotion;
@@ -385,6 +393,11 @@ function beginTransition(direction: TransitionDirection, replay = false): void {
     return;
   }
 
+  // A hidden tab delivers no animation frames, so the timeline must also finish on a timer.
+  transitionTimer = window.setTimeout(() => {
+    transitionTimer = null;
+    completeTransition(performance.now());
+  }, REVEAL_DURATION_MS + 120);
   reconcileAnimation();
 }
 
@@ -393,11 +406,6 @@ function setFormError(message: string): void {
   destinationInput.setAttribute('aria-invalid', 'true');
   destinationInput.focus();
 }
-  // A hidden tab delivers no animation frames, so the timeline must also finish on a timer.
-  transitionTimer = window.setTimeout(() => {
-    transitionTimer = null;
-    completeTransition(performance.now());
-  }, REVEAL_DURATION_MS + 120);
 
 function clearFormError(): void {
   formMessage.textContent = '';
