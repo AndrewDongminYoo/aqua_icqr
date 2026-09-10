@@ -38,6 +38,54 @@ function attachBrowserErrorCapture(page: Page): { errors: string[]; contextLossD
   return { errors, contextLossDiagnostics };
 }
 
+type ShareStubs = {
+  share: 'abort' | 'fail';
+  clipboard: 'fail' | 'record';
+};
+
+async function installRafCounter(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    let callbacks = 0;
+    const requestAnimationFrame = window.requestAnimationFrame.bind(window);
+    window.requestAnimationFrame = (callback) =>
+      requestAnimationFrame((time) => {
+        callbacks += 1;
+        callback(time);
+      });
+    Object.defineProperty(window, '__aquaRafCallbacks', { get: () => callbacks });
+  });
+}
+
+function readRafCount(page: Page): Promise<number> {
+  return page.evaluate(() => (window as typeof window & { __aquaRafCallbacks: number }).__aquaRafCallbacks);
+}
+
+async function stubShare(page: Page, stubs: ShareStubs): Promise<void> {
+  await page.addInitScript((options: ShareStubs) => {
+    Object.defineProperty(navigator, 'share', {
+      configurable: true,
+      value: async () => {
+        if (options.share === 'abort') {
+          throw new DOMException('The native sheet was dismissed.', 'AbortError');
+        }
+        throw new Error('native share failed');
+      },
+    });
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: async (value: string) => {
+          if (options.clipboard === 'record') {
+            (window as typeof window & { __copiedShareUrl?: string }).__copiedShareUrl = value;
+            return;
+          }
+          throw new Error('clipboard failed');
+        },
+      },
+    });
+  }, stubs);
+}
+
 async function createReef(page: Page, url = destination, expectedView: 'reef' | 'qr' = 'reef'): Promise<void> {
   await page.getByLabel('Destination URL').fill(url);
   await page.getByRole('button', { name: 'Create reef' }).click();
@@ -141,16 +189,7 @@ test('keeps a creator reef, then supports button, scene click, keyboard return, 
   page,
 }) => {
   test.setTimeout(45_000);
-  await page.addInitScript(() => {
-    let callbacks = 0;
-    const requestAnimationFrame = window.requestAnimationFrame.bind(window);
-    window.requestAnimationFrame = (callback) =>
-      requestAnimationFrame((time) => {
-        callbacks += 1;
-        callback(time);
-      });
-    Object.defineProperty(window, '__aquaRafCallbacks', { get: () => callbacks });
-  });
+  await installRafCounter(page);
   await page.goto('/');
   await expect(page.locator('html')).toHaveAttribute('data-reveal-phase', 'idle');
   await createReef(page);
@@ -160,9 +199,9 @@ test('keeps a creator reef, then supports button, scene click, keyboard return, 
   await page.getByRole('button', { name: 'Show QR' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-view', 'qr', { timeout: 8_000 });
   await expect(page.locator('html')).toHaveAttribute('data-reveal-phase', 'revealed');
-  const settledFrames = await page.evaluate(() => (window as typeof window & { __aquaRafCallbacks: number }).__aquaRafCallbacks);
+  const settledFrames = await readRafCount(page);
   await page.waitForTimeout(250);
-  expect(await page.evaluate(() => (window as typeof window & { __aquaRafCallbacks: number }).__aquaRafCallbacks)).toBe(settledFrames);
+  expect(await readRafCount(page)).toBe(settledFrames);
 
   const desktopCapture = await decodeCompositeScreenshot(page);
   expect(decodePixels(eraseRectangle(desktopCapture, await protectedStage(page)))).toBeNull();
@@ -200,22 +239,13 @@ test('loads a shared recipient in the living reef and preserves its normalized d
 });
 
 test('keeps reduced-motion initial and QR states static while retaining replay controls', async ({ page }) => {
-  await page.addInitScript(() => {
-    let callbacks = 0;
-    const requestAnimationFrame = window.requestAnimationFrame.bind(window);
-    window.requestAnimationFrame = (callback) =>
-      requestAnimationFrame((time) => {
-        callbacks += 1;
-        callback(time);
-      });
-    Object.defineProperty(window, '__aquaRafCallbacks', { get: () => callbacks });
-  });
+  await installRafCounter(page);
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
   await page.waitForTimeout(100);
-  const initialFrames = await page.evaluate(() => (window as typeof window & { __aquaRafCallbacks: number }).__aquaRafCallbacks);
+  const initialFrames = await readRafCount(page);
   await page.waitForTimeout(250);
-  expect(await page.evaluate(() => (window as typeof window & { __aquaRafCallbacks: number }).__aquaRafCallbacks)).toBe(initialFrames);
+  expect(await readRafCount(page)).toBe(initialFrames);
 
   const initialScene = await page.locator('.scene-canvas').screenshot();
   await page.waitForTimeout(300);
@@ -228,9 +258,9 @@ test('keeps reduced-motion initial and QR states static while retaining replay c
   await createReef(page);
   await page.getByRole('button', { name: 'Show QR' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-view', 'qr');
-  const settledFrames = await page.evaluate(() => (window as typeof window & { __aquaRafCallbacks: number }).__aquaRafCallbacks);
+  const settledFrames = await readRafCount(page);
   await page.waitForTimeout(250);
-  expect(await page.evaluate(() => (window as typeof window & { __aquaRafCallbacks: number }).__aquaRafCallbacks)).toBe(settledFrames);
+  expect(await readRafCount(page)).toBe(settledFrames);
 
   await page.getByRole('button', { name: 'Replay' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-view', 'qr');
@@ -239,35 +269,26 @@ test('keeps reduced-motion initial and QR states static while retaining replay c
 });
 
 test('stops and resumes animation frames when a normal-motion reef becomes hidden and visible', async ({ page }) => {
-  await page.addInitScript(() => {
-    let callbacks = 0;
-    const requestAnimationFrame = window.requestAnimationFrame.bind(window);
-    window.requestAnimationFrame = (callback) =>
-      requestAnimationFrame((time) => {
-        callbacks += 1;
-        callback(time);
-      });
-    Object.defineProperty(window, '__aquaRafCallbacks', { get: () => callbacks });
-  });
+  await installRafCounter(page);
   await page.goto('/');
   await page.waitForTimeout(100);
-  const reefFrames = await page.evaluate(() => (window as typeof window & { __aquaRafCallbacks: number }).__aquaRafCallbacks);
+  const reefFrames = await readRafCount(page);
   await page.waitForTimeout(250);
-  const activeFrames = await page.evaluate(() => (window as typeof window & { __aquaRafCallbacks: number }).__aquaRafCallbacks);
+  const activeFrames = await readRafCount(page);
   expect(activeFrames).toBeGreaterThan(reefFrames);
   await page.evaluate(() => {
     Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
     document.dispatchEvent(new Event('visibilitychange'));
   });
-  const hiddenFrames = await page.evaluate(() => (window as typeof window & { __aquaRafCallbacks: number }).__aquaRafCallbacks);
+  const hiddenFrames = await readRafCount(page);
   await page.waitForTimeout(250);
-  expect(await page.evaluate(() => (window as typeof window & { __aquaRafCallbacks: number }).__aquaRafCallbacks)).toBe(hiddenFrames);
+  expect(await readRafCount(page)).toBe(hiddenFrames);
   await page.evaluate(() => {
     Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
     document.dispatchEvent(new Event('visibilitychange'));
   });
   await page.waitForTimeout(250);
-  expect(await page.evaluate(() => (window as typeof window & { __aquaRafCallbacks: number }).__aquaRafCallbacks)).toBeGreaterThan(hiddenFrames);
+  expect(await readRafCount(page)).toBeGreaterThan(hiddenFrames);
 });
 
 test('rejects unsupported and over-capacity destinations without changing the current URL', async ({ page }) => {
@@ -285,18 +306,7 @@ test('rejects unsupported and over-capacity destinations without changing the cu
 });
 
 test('keeps native-share cancellation separate from clipboard fallback', async ({ page }) => {
-  await page.addInitScript(() => {
-    Object.defineProperty(navigator, 'share', {
-      configurable: true,
-      value: async () => {
-        throw new DOMException('The native sheet was dismissed.', 'AbortError');
-      },
-    });
-    Object.defineProperty(navigator, 'clipboard', {
-      configurable: true,
-      value: { writeText: async () => { throw new Error('clipboard should not run'); } },
-    });
-  });
+  await stubShare(page, { share: 'abort', clipboard: 'fail' });
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
   await createReef(page);
@@ -307,16 +317,7 @@ test('keeps native-share cancellation separate from clipboard fallback', async (
 });
 
 test('copies after a native-share failure without navigating away', async ({ page }) => {
-  await page.addInitScript(() => {
-    Object.defineProperty(navigator, 'share', {
-      configurable: true,
-      value: async () => { throw new Error('native share failed'); },
-    });
-    Object.defineProperty(navigator, 'clipboard', {
-      configurable: true,
-      value: { writeText: async (value: string) => { (window as typeof window & { __copiedShareUrl?: string }).__copiedShareUrl = value; } },
-    });
-  });
+  await stubShare(page, { share: 'fail', clipboard: 'record' });
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
   await createReef(page);
@@ -340,15 +341,8 @@ test('uses a selectable share field and decodable fallback QR when WebGL initial
         return Reflect.apply(getContext, this, [contextId, ...args]);
       },
     });
-    Object.defineProperty(navigator, 'share', {
-      configurable: true,
-      value: async () => { throw new Error('native share failed'); },
-    });
-    Object.defineProperty(navigator, 'clipboard', {
-      configurable: true,
-      value: { writeText: async () => { throw new Error('clipboard failed'); } },
-    });
   });
+  await stubShare(page, { share: 'fail', clipboard: 'fail' });
   await page.setViewportSize({ width: 390, height: 667 });
   await page.goto('/');
   await expect(page.locator('html')).toHaveAttribute('data-renderer', 'fallback');
@@ -408,6 +402,79 @@ test('recovers from actual WebGL context loss without unexpected browser errors'
   expect(browser.contextLossDiagnostics.every((message) => /context lost|webglcontextlost/i.test(message))).toBe(true);
 });
 
+test('clears the transition status when the WebGL context is lost mid-transition', async ({ page }) => {
+  const browser = attachBrowserErrorCapture(page);
+  await page.goto('/');
+  await createReef(page);
+  await page.getByRole('button', { name: 'Show QR' }).click();
+  await expect(page.locator('.reveal-status')).toBeVisible();
+  await loseWebGlContext(page);
+
+  await expect(page.locator('html')).toHaveAttribute('data-renderer', 'fallback');
+  await expect(page.locator('.reveal-status')).toBeHidden();
+  await expect(page.locator('.reveal-status p')).toHaveText('');
+  await expect(page.locator('html')).toHaveAttribute('data-view', 'qr');
+  await expect(page.locator('.fallback-canvas')).toBeVisible();
+  expect(browser.errors).toEqual([]);
+});
+
+test('reports a fallback QR that could not be drawn instead of leaving a blank stage', async ({ page }) => {
+  const browser = attachBrowserErrorCapture(page);
+  await page.addInitScript(() => {
+    const getContext = HTMLCanvasElement.prototype.getContext;
+    Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
+      configurable: true,
+      value(this: HTMLCanvasElement, contextId: string, ...args: unknown[]) {
+        if (contextId === 'webgl' || contextId === 'webgl2') return null;
+        if (contextId === '2d' && this.classList.contains('fallback-canvas')) return null;
+        return Reflect.apply(getContext, this, [contextId, ...args]);
+      },
+    });
+  });
+  await page.goto('/');
+  await expect(page.locator('html')).toHaveAttribute('data-renderer', 'fallback');
+  await createReef(page, destination, 'qr');
+
+  await expect(page.getByText('The QR code could not be drawn in this browser.')).toBeVisible();
+  await expect(page.locator('.fallback-canvas')).toBeHidden();
+  // The notice changes the dock height, so a second attempt at the new size is expected; a rejection would surface as a page error instead.
+  expect(browser.errors.length).toBeGreaterThan(0);
+  expect(browser.errors.every((message) => message.startsWith('Aqua ICQR could not draw the fallback QR code.'))).toBe(true);
+});
+
+test.describe('fallback QR on a high-density display', () => {
+  test.use({ deviceScaleFactor: 2 });
+
+  test('rasterizes the fallback QR at device resolution while keeping its CSS size', async ({ page }) => {
+    await page.addInitScript(() => {
+      const getContext = HTMLCanvasElement.prototype.getContext;
+      Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
+        configurable: true,
+        value(this: HTMLCanvasElement, contextId: string, ...args: unknown[]) {
+          if (contextId === 'webgl' || contextId === 'webgl2') return null;
+          return Reflect.apply(getContext, this, [contextId, ...args]);
+        },
+      });
+    });
+    await page.setViewportSize({ width: 390, height: 667 });
+    await page.goto('/');
+    await createReef(page, maxDensityDestination, 'qr');
+    await expect(page.locator('.fallback-canvas')).toBeVisible();
+
+    const fallbackBox = await page.locator('.fallback-canvas').boundingBox();
+    if (!fallbackBox) throw new Error('The visible fallback QR has no bounding box.');
+    const bitmap = await page.locator('.fallback-canvas').evaluate((canvas) => {
+      if (!(canvas instanceof HTMLCanvasElement)) throw new Error('The fallback surface is not a canvas.');
+      return { width: canvas.width, height: canvas.height };
+    });
+    expect(bitmap.width).toBe(bitmap.height);
+    expect(Math.abs(bitmap.width - fallbackBox.width * 2)).toBeLessThanOrEqual(1);
+    const stage = await protectedStage(page);
+    expect(fallbackBox.y).toBeGreaterThanOrEqual(stage.y);
+    expect(fallbackBox.y + fallbackBox.height).toBeLessThanOrEqual(stage.y + stage.height);
+  });
+});
+
 test.describe('mobile composite QR captures at CSS pixel resolution', () => {
   test.use({ deviceScaleFactor: 1 });
 
@@ -415,16 +482,7 @@ test.describe('mobile composite QR captures at CSS pixel resolution', () => {
     page,
   }) => {
     expect(QRCode.create(maxDensityDestination, { errorCorrectionLevel: 'M' }).modules.size).toBe(69);
-    await page.addInitScript(() => {
-      Object.defineProperty(navigator, 'share', {
-        configurable: true,
-        value: async () => { throw new Error('native share failed'); },
-      });
-      Object.defineProperty(navigator, 'clipboard', {
-        configurable: true,
-        value: { writeText: async () => { throw new Error('clipboard failed'); } },
-      });
-    });
+    await stubShare(page, { share: 'fail', clipboard: 'fail' });
 
     for (const height of [844, 667]) {
       await page.setViewportSize({ width: 390, height });

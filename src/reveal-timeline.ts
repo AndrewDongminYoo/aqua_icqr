@@ -1,6 +1,6 @@
 const SCATTER_DURATION_MS = 1_100;
 const LIFT_DURATION_MS = 1_900;
-const REVEAL_DURATION_MS = SCATTER_DURATION_MS + LIFT_DURATION_MS;
+export const REVEAL_DURATION_MS = SCATTER_DURATION_MS + LIFT_DURATION_MS;
 
 export type RevealPhase = 'scattering' | 'lifting' | 'revealed';
 

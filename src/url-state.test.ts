@@ -25,4 +25,15 @@ describe('destination URL state', () => {
       destination,
     });
   });
+
+  it.each(['', '#', '#photo=1', '#goto=x', '#section-to=deep'])(
+    'reports a fragment without a to parameter as missing: %j',
+    (fragment) => {
+      expect(fromShareFragment(fragment)).toEqual({ ok: false, reason: 'missing' });
+    },
+  );
+
+  it('reports a present but empty to parameter as an empty destination', () => {
+    expect(fromShareFragment('#to=')).toEqual({ ok: false, reason: 'empty' });
+  });
 });

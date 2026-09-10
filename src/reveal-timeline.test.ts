@@ -1,8 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import { getRevealFrame, getReverseRevealFrame } from './reveal-timeline';
+import { getRevealFrame, getReverseRevealFrame, REVEAL_DURATION_MS } from './reveal-timeline';
 
 describe('reveal timeline', () => {
+  it('exports the duration at which both directions settle', () => {
+    expect(getRevealFrame(REVEAL_DURATION_MS - 1, false).phase).toBe('lifting');
+    expect(getRevealFrame(REVEAL_DURATION_MS, false).phase).toBe('revealed');
+    expect(getReverseRevealFrame(REVEAL_DURATION_MS - 1, false).fishProgress).toBeGreaterThan(0);
+    expect(getReverseRevealFrame(REVEAL_DURATION_MS, false).fishProgress).toBe(0);
+  });
+
   it('moves from scattering through lifting to revealed', () => {
     expect(getRevealFrame(0, false)).toEqual({
       phase: 'scattering',

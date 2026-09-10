@@ -80,3 +80,15 @@ The full gate log is `.superpowers/sdd/2026-09-09-living-reef-transition/final-v
 The dedicated browser screenshots use `/tmp/aqua-icqr-v1-*` and `/tmp/aqua-icqr-v2-*` paths.
 Final decoder captures are `test-results/**/composite-*.png`.
 These local artifacts are not tracked and can be replaced by later runs.
+
+## 2026-09-10 Review-Fix Pass
+
+The counts above describe the 2026-09-09 run and are left as recorded.
+A code review on 2026-09-10 produced fifteen findings; fourteen were applied and one was declined.
+The declined finding asked to remove the `supportsWebGL` probe: three r185 logs its own console error before throwing when WebGL2 is missing, and the fallback E2E case asserts a clean console, so the probe stays and now checks `webgl2` only.
+
+`npm run test:e2e` now builds before Playwright starts, and `npm run check` is `test` followed by `test:e2e`, so the E2E gate cannot serve a stale `dist/`.
+The E2E config no longer reuses a preview server that is already listening on port 4173.
+
+After the pass, `npx vitest run` reported 29 tests passed and `npm run test:e2e` reported 13 tests passed.
+The three new E2E cases (context loss mid-transition, an undrawable fallback QR, and the fallback QR on a 2x display) each failed at their own assertion with the matching fix hunk reverted, then passed with it restored.

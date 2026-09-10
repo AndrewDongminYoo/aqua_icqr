@@ -5,6 +5,7 @@ import { createQrSurface, QrCapacityError } from './qr-surface';
 import {
   getRevealFrame,
   getReverseRevealFrame,
+  REVEAL_DURATION_MS,
   type RevealFrame,
 } from './reveal-timeline';
 import { fromShareFragment, parseDestination, toShareFragment } from './url-state';
@@ -132,11 +133,12 @@ let transition: Transition | null = null;
 let animationFrame: number | null = null;
 let layoutFrame: number | null = null;
 let reducedMotion = motionQuery.matches;
-let fallbackRender: { destination: string; size: number } | null = null;
+let fallbackRender: { destination: string; size: number; pixelRatio: number } | null = null;
 
 function supportsWebGL(): boolean {
+  // three r185 requests webgl2 only and logs a console error before throwing when it is missing.
   const probe = document.createElement('canvas');
-  const context = probe.getContext('webgl2') ?? probe.getContext('webgl');
+  const context = probe.getContext('webgl2');
 
   if (!context) return false;
 
@@ -190,16 +192,6 @@ function getCurrentFrame(time = performance.now()): RevealFrame {
 function setCanvasDescription(): void {
   const canToggleView = Boolean(scene && activeDestination && !transition);
 
-  if (currentView === 'qr') {
-    sceneCanvas.setAttribute('aria-label', 'A top-down QR mosaic on a clear seabed, ready to scan');
-  } else if (transition?.direction === 'to-qr') {
-    sceneCanvas.setAttribute('aria-label', 'A living reef transforming into a QR mosaic');
-  } else if (transition?.direction === 'to-reef') {
-    sceneCanvas.setAttribute('aria-label', 'A QR mosaic returning to the living reef');
-  } else {
-    sceneCanvas.setAttribute('aria-label', 'A low-poly underwater diorama with fish swimming over a mosaic seabed');
-  }
-
   if (canToggleView) {
     sceneCanvas.tabIndex = 0;
     sceneCanvas.setAttribute('role', 'button');
@@ -209,9 +201,18 @@ function setCanvasDescription(): void {
         ? 'Living reef. Activate to show the QR code.'
         : 'QR code. Activate to return to the living reef.',
     );
+    return;
+  }
+
+  sceneCanvas.removeAttribute('tabindex');
+  sceneCanvas.removeAttribute('role');
+
+  if (transition?.direction === 'to-qr') {
+    sceneCanvas.setAttribute('aria-label', 'A living reef transforming into a QR mosaic');
+  } else if (transition?.direction === 'to-reef') {
+    sceneCanvas.setAttribute('aria-label', 'A QR mosaic returning to the living reef');
   } else {
-    sceneCanvas.removeAttribute('tabindex');
-    sceneCanvas.removeAttribute('role');
+    sceneCanvas.setAttribute('aria-label', 'A low-poly underwater diorama with fish swimming over a mosaic seabed');
   }
 }
 
@@ -227,7 +228,6 @@ function renderControls(): void {
   viewToggle.hidden = isFallback;
   viewToggle.disabled = !isReady || isTransitioning;
   viewToggle.textContent = currentView === 'reef' ? 'Show QR' : 'View reef';
-  viewToggle.setAttribute('aria-pressed', String(currentView === 'qr'));
   createButton.disabled = isTransitioning;
   replayButton.disabled = !isReady || isTransitioning;
   shareButton.disabled = !isReady || isTransitioning;
@@ -259,10 +259,14 @@ function updateLayout(): void {
   experience.style.setProperty('--fallback-size', `${fallbackSize}px`);
   scene?.resize(window.innerWidth, window.innerHeight, insets);
 
+  const fallbackPixelRatio = getFallbackPixelRatio();
+
   if (!scene && activeDestination && (
-    fallbackRender?.destination !== activeDestination || fallbackRender.size !== fallbackSize
+    fallbackRender?.destination !== activeDestination ||
+    fallbackRender.size !== fallbackSize ||
+    fallbackRender.pixelRatio !== fallbackPixelRatio
   )) {
-    void drawFallback(activeDestination, fallbackSize);
+    void drawFallback(activeDestination, fallbackSize, fallbackPixelRatio);
   }
 
   if (!document.hidden) {
@@ -323,7 +327,7 @@ function renderScene(now: number): void {
         : getReverseRevealFrame(elapsed, false);
     scene.setRevealFrame(frame);
 
-    if (elapsed >= 3_000) {
+    if (elapsed >= REVEAL_DURATION_MS) {
       completeTransition(now);
     } else {
       setPhase(
@@ -388,17 +392,31 @@ function validationMessage(reason: 'empty' | 'invalid' | 'unsupported-protocol')
   return 'Enter a complete URL, including https://.';
 }
 
-async function drawFallback(destination: string, size: number): Promise<void> {
-  fallbackRender = { destination, size };
-  await QRCode.toCanvas(fallbackCanvas, destination, {
-    errorCorrectionLevel: 'M',
-    margin: 4,
-    width: size,
-    color: {
-      dark: '#092f35ff',
-      light: '#f0dfadff',
-    },
-  });
+function getFallbackPixelRatio(): number {
+  return Math.max(1, window.devicePixelRatio || 1);
+}
+
+async function drawFallback(destination: string, size: number, pixelRatio: number): Promise<void> {
+  // Recorded before drawing so a failed attempt is not retried on every layout pass.
+  fallbackRender = { destination, size, pixelRatio };
+
+  try {
+    await QRCode.toCanvas(fallbackCanvas, destination, {
+      errorCorrectionLevel: 'M',
+      margin: 4,
+      width: Math.round(size * pixelRatio),
+      color: {
+        dark: '#092f35ff',
+        light: '#f0dfadff',
+      },
+    });
+  } catch (error) {
+    fallbackCanvas.hidden = true;
+    shareMessage.textContent = 'The QR code could not be drawn in this browser.';
+    console.warn('Aqua ICQR could not draw the fallback QR code.', error);
+    return;
+  }
+
   fallbackCanvas.style.removeProperty('width');
   fallbackCanvas.style.removeProperty('height');
 
@@ -549,6 +567,8 @@ sceneCanvas.addEventListener('webglcontextlost', (event) => {
   reconcileAnimation();
   lostScene?.dispose();
   sceneCanvas.hidden = true;
+  revealStatus.hidden = true;
+  revealStatusText.textContent = '';
   document.documentElement.dataset.renderer = 'fallback';
 
   if (activeDestination) {
@@ -578,7 +598,10 @@ motionQuery.addEventListener('change', (event) => {
   requestLayout();
   reconcileAnimation();
 });
-window.addEventListener('beforeunload', () => scene?.dispose());
+window.addEventListener('pagehide', (event) => {
+  // A back/forward-cache restore resumes the render loop, so keep the renderer alive for it.
+  if (!event.persisted) scene?.dispose();
+});
 
 const layoutObserver = new ResizeObserver(requestLayout);
 layoutObserver.observe(header);
@@ -598,6 +621,6 @@ if (sharedDestination.ok) {
   window.requestAnimationFrame(() => {
     void activateDestination(sharedDestination.destination, false);
   });
-} else if (window.location.hash.includes('to=')) {
+} else if (sharedDestination.reason !== 'missing') {
   setFormError('This shared reef contains an invalid destination.');
 }

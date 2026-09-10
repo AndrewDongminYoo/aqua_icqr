@@ -28,9 +28,15 @@ export function toShareFragment(destination: string): string {
   return `#${new URLSearchParams({ to: destination }).toString()}`;
 }
 
-export function fromShareFragment(fragment: string): DestinationResult {
+export type ShareFragmentResult = DestinationResult | { ok: false; reason: 'missing' };
+
+export function fromShareFragment(fragment: string): ShareFragmentResult {
   const payload = fragment.startsWith('#') ? fragment.slice(1) : fragment;
-  const destination = new URLSearchParams(payload).get('to') ?? '';
+  const destination = new URLSearchParams(payload).get('to');
+
+  if (destination === null) {
+    return { ok: false, reason: 'missing' };
+  }
 
   return parseDestination(destination);
 }
