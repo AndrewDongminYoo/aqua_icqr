@@ -30,6 +30,10 @@ Run all automated checks with this command:
 npm run check
 ```
 
+Use `npm ci` to install the exact versions in `package-lock.json` before verification.
+The Playwright configuration uses an installed Google Chrome browser through `channel: 'chrome'`.
+CI currently runs the unit tests and production build on Node.js 24.20.0; run `npm run check` locally for the browser gate as well.
+
 The command runs these gates:
 
 1. Vitest unit tests for URL state, QR surface mapping, animation timing, and deterministic scene movement.
@@ -45,6 +49,17 @@ See the [active implementation plan](docs/plans/2026-09-09-living-reef-transitio
 
 Automated decoding does not prove that every physical camera can scan the result.
 A real-phone scan of the desktop result is a separate manual release gate and is currently `[PENDING]`.
+
+The pinned Trunk configuration checks GitHub Actions syntax and action revisions, dependency advisories in the lockfile, and potential secrets without contacting credential providers.
+Run the complete tooling baseline with:
+
+```bash
+trunk check --all --no-fix --jobs=2
+```
+
+The pre-push action checks changed files.
+Automatic formatting hooks are disabled.
+Pinact is deliberately locked to `4.1.1` with both `lint` and `upgrade` checks enabled.
 
 ## Sharing and Privacy
 
