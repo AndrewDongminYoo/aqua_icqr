@@ -13,7 +13,8 @@ lint:
   enabled:
     - actionlint@1.7.12
     - osv-scanner@2.7.0
-    - pinact@4.1.1!
+    - pinact@4.1.1!:
+        commands: [lint, upgrade]
     - trufflehog@3.99.7
   definitions:
     - name: pinact
@@ -27,6 +28,11 @@ lint:
         - name: lint
           # Scan locally without sending candidate credentials to providers.
           run: trufflehog filesystem --json --fail --no-verification --no-update ${target}
+          direct_configs:
+            - .trunk/configs/trufflehog_to_sarif.py
+          parser:
+            runtime: python
+            run: python3 .trunk/configs/trufflehog_to_sarif.py
 actions:
   enabled:
     - trunk-check-pre-push

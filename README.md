@@ -32,7 +32,9 @@ npm run check
 
 Use `npm ci` to install the exact versions in `package-lock.json` before verification.
 The Playwright configuration uses an installed Google Chrome browser through `channel: 'chrome'`.
-CI currently runs the unit tests and production build on Node.js 24.20.0; run `npm run check` locally for the browser gate as well.
+CI currently runs the unit tests and production build on Node.js 24.20.0, plus the standard-library offline secret-reader regressions with Python 3.
+Run `npm run check` locally for the browser gate as well.
+Run `python3 -B .trunk/configs/tests/test_trufflehog_to_sarif.py` separately for the reader.
 
 The command runs these gates:
 

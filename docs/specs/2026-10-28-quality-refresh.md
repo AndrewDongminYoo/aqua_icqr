@@ -31,3 +31,11 @@ Do not add formatters or style linters without an existing project convention to
 
 Push and PR creation require explicit repository-specific approval.
 After approval, continue the requested hosted gates, merge, cleanup and memory recording.
+
+## Filesystem Secret Reader Follow-up
+
+Use the reviewed standard-library reader and ten CLI regressions from `rn-typed-assets/.trunk/configs/`.
+Include the reader in Trunk's copy sandbox through `direct_configs` and run its exact test file in CI.
+Scan with `--no-verification --no-update` and retain decoded filesystem findings even without a literal source location.
+Reject malformed conversion without a partial clean report and omit secret values from SARIF messages.
+Preserve package manifests, locks, application code, existing tests, assets, corpora, permissions and product behavior.

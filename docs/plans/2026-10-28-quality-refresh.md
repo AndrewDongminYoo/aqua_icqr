@@ -23,3 +23,10 @@ Limit changes to dependency resolution, Trunk configuration and affected documen
 Keep the exact direct dependency pins when registry metadata confirms they are current.
 Keep `package-lock.json` visible to dependency scanning and use no advisory suppressions without specific evidence and approval.
 Record results and unresolved warnings in the external review evidence directory rather than adding generated logs to this repository.
+
+## Reader Follow-up Verification
+
+1. Confirm byte identity with the independently reviewed shared reader and its ten tests, then run the CLI suite.
+2. Reproduce old-reader decoded loss and require actual configured Trunk failures for encoded and literal controls, with clean input passing.
+3. Run the full no-fix Trunk scan and audit affected commands and CI scope.
+4. Retain existing passing application gates only after the application, test, dependency and asset inputs compare equal.
