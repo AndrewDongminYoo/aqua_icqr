@@ -34,8 +34,15 @@ After approval, continue the requested hosted gates, merge, cleanup and memory r
 
 ## Filesystem Secret Reader Follow-up
 
-Use the reviewed standard-library reader and ten CLI regressions from `rn-typed-assets/.trunk/configs/`.
+Use the reviewed standard-library reader and thirteen CLI regressions with the validated source-line repair from `localizations/.trunk/configs/`.
 Include the reader in Trunk's copy sandbox through `direct_configs` and run its exact test file in CI.
 Scan with `--no-verification --no-update` and retain decoded filesystem findings even without a literal source location.
 Reject malformed conversion without a partial clean report and omit secret values from SARIF messages.
 Preserve package manifests, locks, application code, existing tests, assets, corpora, permissions and product behavior.
+
+## Source-Line Repair
+
+The current reader uses the independently reviewed `localizations` repair at `b47e59659a886ad673a2f4a9bed6a3bf4986615b`.
+It prefers a positive integer filesystem line only when the literal starts on that line.
+Invalid hints retain literal-search and file-level fallbacks.
+Thirteen CLI tests cover repeated and out-of-order findings in addition to the existing lossless conversion cases.

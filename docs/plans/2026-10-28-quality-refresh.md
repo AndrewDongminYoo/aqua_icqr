@@ -26,7 +26,14 @@ Record results and unresolved warnings in the external review evidence directory
 
 ## Reader Follow-up Verification
 
-1. Confirm byte identity with the independently reviewed shared reader and its ten tests, then run the CLI suite.
+1. Confirm byte identity with the independently reviewed shared reader and its thirteen tests, then run the CLI suite.
 2. Reproduce old-reader decoded loss and require actual configured Trunk failures for encoded and literal controls, with clean input passing.
 3. Run the full no-fix Trunk scan and audit affected commands and CI scope.
 4. Retain existing passing application gates only after the application, test, dependency and asset inputs compare equal.
+
+## Source-Line Repair
+
+The current reader uses the independently reviewed `localizations` repair at `b47e59659a886ad673a2f4a9bed6a3bf4986615b`.
+It prefers a positive integer filesystem line only when the literal starts on that line.
+Invalid hints retain literal-search and file-level fallbacks.
+Thirteen CLI tests cover repeated and out-of-order findings in addition to the existing lossless conversion cases.
