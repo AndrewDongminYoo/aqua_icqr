@@ -8,7 +8,7 @@ The visitor can transform the reef into a scannable QR code and return to the re
 The creator can generate and share the experience without an account or server-side storage.
 
 Success requires a coherent transformation between the reef and QR views, plus a QR code that a separate device can read.
-The operator approved this revised interaction after comparing the first implementation with `https://tree.icqr.com/`.
+This revised interaction was approved after comparing the first implementation with `https://tree.icqr.com/`.
 The reference establishes a persistent 3D scene, reversible view changes, and color continuity between the scene and its QR view.
 
 ## Approved Product Decisions

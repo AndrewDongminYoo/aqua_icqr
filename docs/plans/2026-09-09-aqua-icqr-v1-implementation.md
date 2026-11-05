@@ -479,5 +479,5 @@ Expected: Only the planned product files and documentation appear outside `.supe
 
 - [ ] **Step 7: Record the remaining manual gate**
 
-Report the physical-phone scan as `[PENDING]` unless the operator completes it during this task.
+Report the physical-phone scan as `[PENDING]` unless I complete it during this task.
 Do not describe automated QR decoding as proof of the physical-phone result.
