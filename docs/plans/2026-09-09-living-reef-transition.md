@@ -2,7 +2,7 @@
 
 ## Approval and Intent
 
-The operator approved this correction after reviewing Aqua ICQR v1 against `https://tree.icqr.com/` and two reference screenshots.
+This correction was approved after reviewing Aqua ICQR v1 against `https://tree.icqr.com/` and two reference screenshots.
 The main experience must remain an animated underwater diorama until the visitor requests the QR view.
 The reef must transform into a colored QR composition and return to the reef on request.
 This plan replaces the earlier automatic reveal requirement.
@@ -143,5 +143,5 @@ Report failures against the specific product behavior, not only data attributes.
 The root reviews each implementation task and then the integrated change.
 Native browser inspection covers the initial reef, the transition, the final QR, and the return to the reef.
 The final gate is `npm run check`.
-The actual phone-camera scan remains `[PENDING]` until the operator performs it.
+The actual phone-camera scan remains `[PENDING]` until I perform it.
 The supplied precedent `wiki/concepts/authoring-time-vs-runtime-verification.md` requires this distinction.
