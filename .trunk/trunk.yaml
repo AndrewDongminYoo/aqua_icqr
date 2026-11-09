@@ -1,6 +1,6 @@
 version: 0.1
 cli:
-  version: 1.25.0
+  version: 1.29.0
 plugins:
   sources:
     - id: trunk
@@ -10,12 +10,6 @@ runtimes:
   enabled:
     - python@3.14.4
 lint:
-  enabled:
-    - actionlint@1.7.12
-    - osv-scanner@2.7.0
-    - pinact@4.1.1!:
-        commands: [lint, upgrade]
-    - trufflehog@3.99.7
   definitions:
     - name: pinact
       commands:
@@ -33,6 +27,15 @@ lint:
           parser:
             runtime: python
             run: python3 .trunk/configs/trufflehog_to_sarif.py
+  enabled:
+    - actionlint@1.7.12
+    - osv-scanner@2.7.0
+    - pinact@4.1.1!
+    - trufflehog@3.99.8
 actions:
+  disabled:
+    - trunk-announce
+    - trunk-fmt-pre-commit
   enabled:
     - trunk-check-pre-push
+    - trunk-upgrade-available
